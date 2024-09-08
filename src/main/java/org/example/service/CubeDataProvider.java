@@ -4,19 +4,19 @@ import com.jsoniter.JsonIterator;
 import lombok.extern.slf4j.Slf4j;
 import org.example.Main;
 import org.example.model.DataAllTb;
+import org.example.model.DataCube;
 import org.example.model.DataGosb;
 import org.example.model.DataTb;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 @Slf4j
-public class CubeDataProvider {
+public class CubeDataProvider implements DataProvider {
 
     private final Lock lock = new ReentrantLock();
     private static DataAllTb dataAllTb;
@@ -25,13 +25,14 @@ public class CubeDataProvider {
         init();
     }
 
-    public DataAllTb getAllTb() {
-        return new DataAllTb();
-    }
-
     /*
           ТБ
      */
+
+    public Long getAllTb() {
+        return Long.valueOf(dataAllTb.getTb().size());
+    }
+
     public Long getAllGosb() {
         return dataAllTb.getTb().stream()
                 .mapToLong(t -> t.getGosb().size())
@@ -52,8 +53,11 @@ public class CubeDataProvider {
                 .sum();
     }
 
-    public List<DataTb> fillAllTb() {
-        return new ArrayList<>(dataAllTb.getTb());
+    public List<DataCube> fillAllTb() {
+        return dataAllTb.getTb().stream()
+                .map(DataTb::getCode)
+                .map(DataCube::new)
+                .collect(Collectors.toList());
     }
 
     public Long getTbGosb(String tb) {
@@ -83,10 +87,12 @@ public class CubeDataProvider {
      *  ТБ - ГОСБ
      */
 
-    public List<DataGosb> fillAllTbGosb(String tb) {
+    public List<DataCube> fillAllTbGosb(String tb) {
         return dataAllTb.getTb().stream()
                 .filter(t -> t.getCode().equals(tb))
                 .flatMap(t -> t.getGosb().stream())
+                .map(DataGosb::getCode)
+                .map(DataCube::new)
                 .collect(Collectors.toList());
     }
 
@@ -125,6 +131,5 @@ public class CubeDataProvider {
             dataAllTb = new DataAllTb();
         }
     }
-
 
 }

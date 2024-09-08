@@ -7,10 +7,66 @@
           "code": "1010",
           "organization": [
             {
-              "code": "1212121313/12121",
+              "code": "291417884325/500237414",
               "contract" : [
                 {
                   "code": "number-100"
+                },
+                {
+                  "code": "number-101"
+                }
+              ]
+            },
+            {
+              "code": "798217665971/502684393",
+              "contract" : [
+                {
+                  "code": "number-200"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "code": "1020",
+          "organization": [
+            {
+              "code": "8912667396",
+              "contract" : [
+                {
+                  "code": "number-300"
+                },
+                {
+                  "code": "number-301"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "code": "20",
+      "gosb": [
+        {
+          "code": "1011",
+          "organization": [
+            {
+              "code": "069635770416/500237414",
+              "contract" : [
+                {
+                  "code": "number-110"
+                },
+                {
+                  "code": "number-111"
+                }
+              ]
+            },
+            {
+              "code": "418497462764/502684393",
+              "contract" : [
+                {
+                  "code": "number-210"
                 }
               ]
             }
@@ -18,5 +74,6 @@
         }
       ]
     }
+
   ]
 }
