@@ -3,14 +3,16 @@ package org.example;
 import org.example.model.DataCube;
 import org.example.model.RequestCube;
 import org.example.service.CubeService;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+@CrossOrigin(maxAge = 3600)
 @RestController
 public class Controller {
 
@@ -31,7 +33,8 @@ public class Controller {
         return cubeService.fillAllTbGosb(code);
     }
 
-    @PutMapping("/cube")
+    //@PutMapping("/cube")
+    @PostMapping("/cube")
     public List<DataCube> getCube(@RequestBody RequestCube requestCube) {
        return cubeService.getDataCube(requestCube);
    }

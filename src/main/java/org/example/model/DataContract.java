@@ -2,13 +2,13 @@ package org.example.model;
 
 import lombok.Data;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 public class DataContract {
 
     private String code;
-    private Map<String, Long> metrics = new HashMap<>();
+    private List<Metric> metrics = new ArrayList<>();
 
 }

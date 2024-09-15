@@ -1,6 +1,7 @@
 package org.example.service;
 
 import org.example.model.DataCube;
+import org.example.model.Metric;
 import org.example.model.RequestCube;
 
 import java.util.Collections;
@@ -12,16 +13,16 @@ public class CubeService {
 
 
     public DataCube getAllTb() {
-        DataCube dataCube = new DataCube("all-tb");
+        DataCube dataCube = new DataCube("Все ТБ");
         Long tb = dataProvider.getAllTb();
         Long gosb = dataProvider.getAllGosb();
         Long organization = dataProvider.getAllOrganization();
         Long contract = dataProvider.getAllContract();
         //
-        dataCube.getMetrics().put("ТБ", tb);
-        dataCube.getMetrics().put("ГОСБы", gosb);
-        dataCube.getMetrics().put("Организации", organization);
-        dataCube.getMetrics().put("Договоры", contract);
+        dataCube.getMetrics().add(new Metric("ТБ", tb));
+        dataCube.getMetrics().add(new Metric("ГОСБы", gosb));
+        dataCube.getMetrics().add(new Metric("Организации", organization));
+        dataCube.getMetrics().add(new Metric("Договоры", contract));
         //
         return dataCube;
     }
@@ -33,9 +34,9 @@ public class CubeService {
             Long organization = dataProvider.getTbOrganization(d.getCode());
             Long contract = dataProvider.getTbContract(d.getCode());
             //
-            d.getMetrics().put("ГОСБы", gosb);
-            d.getMetrics().put("Организации", organization);
-            d.getMetrics().put("Договоры", contract);
+            d.getMetrics().add(new Metric("ГОСБы", gosb));
+            d.getMetrics().add(new Metric("Организации", organization));
+            d.getMetrics().add(new Metric("Договоры", contract));
         });
         return dataTbList;
     }
@@ -46,8 +47,8 @@ public class CubeService {
             Long organization = dataProvider.getTbGosbOrganization(tb, d.getCode());
             Long contract = dataProvider.getTbGosbContract(tb, d.getCode());
             //
-            d.getMetrics().put("Организации", organization);
-            d.getMetrics().put("Договоры", contract);
+            d.getMetrics().add(new Metric("Организации", organization));
+            d.getMetrics().add(new Metric("Договоры", contract));
         });
         return dataGosbList;
     }
