@@ -1,15 +1,15 @@
-package org.example.model;
+package org.example.model.deep;
 
 import lombok.Data;
+import org.example.model.Metric;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class DataTb {
+public class DataContract {
 
     private String code;
     private List<Metric> metrics = new ArrayList<>();
-    private List<DataGosb> gosb = new ArrayList<>();
 
 }

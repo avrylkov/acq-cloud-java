@@ -1,11 +1,17 @@
 package org.example.service;
 
-import org.example.model.DataCube;
+import org.apache.commons.lang3.StringUtils;
+import org.example.model.RequestCubeLookUp;
+import org.example.model.deep.DataCube;
 import org.example.model.Metric;
-import org.example.model.RequestCube;
+import org.example.model.RequestCubeDeep;
+import org.example.model.up.DataCubeLookUp;
+import org.example.model.up.DataCubeLookUpTb;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class CubeService {
 
@@ -53,12 +59,32 @@ public class CubeService {
         return dataGosbList;
     }
 
-    public List<DataCube> getDataCube(RequestCube requestCube) {
-        switch (requestCube.getCode()) {
-            case ALL :  return Collections.singletonList(getAllTb());
-            case ALL_TB: return fillAllTb();
-            case TB: return fillAllTbGosb(requestCube.getTb());
+    public List<DataCube> getDataCube(RequestCubeDeep requestCubeDeep) {
+        switch (requestCubeDeep.getCode()) {
+            case ALL :  return filterByCode(Collections.singletonList(getAllTb()), requestCubeDeep);
+            case ALL_TB: return filterByCode(fillAllTb(), requestCubeDeep);
+            case TB: return filterByCode(fillAllTbGosb(requestCubeDeep.getTb()), requestCubeDeep);
         }
         return Collections.EMPTY_LIST;
     }
+
+    /*
+     *    Look UP
+     */
+    public Set<DataCubeLookUpTb> getDataLookUpByContract(RequestCubeLookUp requestCubeLookUp) {
+        if (StringUtils.isNoneEmpty(requestCubeLookUp.getContract())) {
+            return dataProvider.getDataLookUpByContract(requestCubeLookUp.getContract());
+        }
+        return new DataCubeLookUp().getTbs();
+    }
+
+    private List<DataCube> filterByCode(List<DataCube> cubeList, RequestCubeDeep requestCubeDeep) {
+        if (StringUtils.isEmpty(requestCubeDeep.getCodeFilter())) {
+            return cubeList;
+        }
+        return cubeList.stream()
+                .filter(c -> c.getCode().contains(requestCubeDeep.getCodeFilter()))
+                .collect(Collectors.toList());
+    }
+
 }

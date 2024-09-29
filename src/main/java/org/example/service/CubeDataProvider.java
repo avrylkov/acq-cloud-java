@@ -3,14 +3,23 @@ package org.example.service;
 import com.jsoniter.JsonIterator;
 import lombok.extern.slf4j.Slf4j;
 import org.example.Main;
-import org.example.model.DataAllTb;
-import org.example.model.DataCube;
-import org.example.model.DataGosb;
-import org.example.model.DataTb;
+import org.example.model.deep.DataAllTb;
+import org.example.model.deep.DataContract;
+import org.example.model.deep.DataCube;
+import org.example.model.deep.DataGosb;
+import org.example.model.deep.DataOrganization;
+import org.example.model.deep.DataTb;
+import org.example.model.up.DataCubeLookUp;
+import org.example.model.up.DataCubeLookUpContract;
+import org.example.model.up.DataCubeLookUpGosb;
+import org.example.model.up.DataCubeLookUpOrganization;
+import org.example.model.up.DataCubeLookUpTb;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -112,6 +121,47 @@ public class CubeDataProvider implements DataProvider {
                 .filter(t -> t.getCode().equals(gosb))
                 .flatMap(t -> t.getOrganization().stream())
                 .mapToLong(t -> t.getContract().size()).sum();
+    }
+
+    public Set<DataCubeLookUpTb> getDataLookUpByContract(String code) {
+        DataCubeLookUp lookUp = new DataCubeLookUp();
+
+        for(DataTb tb : dataAllTb.getTb())  {
+            for (DataGosb gosb : tb.getGosb()) {
+                for(DataOrganization organization: gosb.getOrganization()) {
+                    for (DataContract contract : organization.getContract()) {
+                        if (contract.getCode().contains(code)) {
+                            DataCubeLookUpTb cubeLookUpTb = lookUp.findTb(tb.getCode());
+                            if (cubeLookUpTb == null) {
+                                cubeLookUpTb = new DataCubeLookUpTb(tb.getCode());
+                                lookUp.getTbs().add(cubeLookUpTb);
+                            }
+
+                            DataCubeLookUpGosb lookUpGosb = cubeLookUpTb.findGosb(gosb.getCode());
+                            if (lookUpGosb == null) {
+                                lookUpGosb = new DataCubeLookUpGosb(gosb.getCode());
+                                cubeLookUpTb.getGosbs().add(lookUpGosb);
+                            }
+
+                            DataCubeLookUpOrganization lookUpOrganization = lookUpGosb.findOrganization(organization.getCode());
+                            if (lookUpOrganization == null) {
+                                lookUpOrganization = new DataCubeLookUpOrganization(organization.getCode());
+                                lookUpGosb.getOrganizations().add(lookUpOrganization);
+                            }
+
+                            DataCubeLookUpContract lookUpContract = lookUpOrganization.findContract(contract.getCode());
+                            if (lookUpContract == null) {
+                                lookUpContract = new DataCubeLookUpContract(contract.getCode());
+                                lookUpOrganization.getContracts().add(lookUpContract);
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return lookUp.getTbs();
+
     }
 
     private void init() {

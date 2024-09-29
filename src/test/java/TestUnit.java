@@ -4,7 +4,7 @@ import org.example.Handler;
 import org.example.Main;
 import org.example.Request;
 import org.example.Response;
-import org.example.model.DataAllTb;
+import org.example.model.deep.DataAllTb;
 import org.junit.Test;
 
 import java.io.IOException;
