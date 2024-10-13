@@ -10,7 +10,12 @@
               "code": "291417884325/500237414",
               "contract" : [
                 {
-                  "code": "number-100"
+                  "code": "number-100",
+                  "shop": [
+                    {
+                      "code": "20001111"
+                    }
+                  ]
                 },
                 {
                   "code": "number-1011"

@@ -4,5 +4,6 @@ public enum RequestCubeCode {
 
     ALL,
     ALL_TB,
-    TB
+    TB,
+    GOSB
 }

@@ -7,10 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class DataContract {
+public class DataShop {
 
     private String code;
     private List<Metric> metrics = new ArrayList<>();
-    private List<DataShop> shop = new ArrayList<>();
-
 }

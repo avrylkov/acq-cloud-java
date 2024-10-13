@@ -2,7 +2,9 @@ package org.example.service;
 
 import com.jsoniter.JsonIterator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.example.Main;
+import org.example.model.RequestCubeLookUp;
 import org.example.model.deep.DataAllTb;
 import org.example.model.deep.DataContract;
 import org.example.model.deep.DataCube;
@@ -17,7 +19,6 @@ import org.example.model.up.DataCubeLookUpTb;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.locks.Lock;
@@ -62,6 +63,15 @@ public class CubeDataProvider implements DataProvider {
                 .sum();
     }
 
+    public Long getAllShop() {
+        return dataAllTb.getTb().stream()
+                .flatMap(t -> t.getGosb().stream())
+                .flatMap(t -> t.getOrganization().stream())
+                .flatMap(t -> t.getContract().stream())
+                .mapToLong(t -> t.getShop().size())
+                .sum();
+    }
+
     public List<DataCube> fillAllTb() {
         return dataAllTb.getTb().stream()
                 .map(DataTb::getCode)
@@ -92,6 +102,16 @@ public class CubeDataProvider implements DataProvider {
                 .sum();
     }
 
+    public Long getTbShop(String tb) {
+        return dataAllTb.getTb().stream()
+                .filter(t -> t.getCode().equals(tb))
+                .flatMap(t -> t.getGosb().stream())
+                .flatMap(t -> t.getOrganization().stream())
+                .flatMap(t -> t.getContract().stream())
+                .mapToLong(t -> t.getShop().size())
+                .sum();
+    }
+
     /*
      *  ТБ - ГОСБ
      */
@@ -104,6 +124,17 @@ public class CubeDataProvider implements DataProvider {
                 .map(DataCube::new)
                 .collect(Collectors.toList());
     }
+
+    public List<DataCube> fillAllTbGosbOrganization(String tb, String gosb) {
+        return dataAllTb.getTb().stream()
+                .filter(t -> t.getCode().equals(tb))
+                .flatMap(t -> t.getGosb().stream())
+                .map(DataGosb::getCode)
+                .filter(code -> code.equals(gosb))
+                .map(DataCube::new)
+                .collect(Collectors.toList());
+    }
+
 
     public Long getTbGosbOrganization(String tb, String gosb) {
         return dataAllTb.getTb().stream()
@@ -123,52 +154,92 @@ public class CubeDataProvider implements DataProvider {
                 .mapToLong(t -> t.getContract().size()).sum();
     }
 
-    public Set<DataCubeLookUpTb> getDataLookUpByContract(String code) {
+    public Long getTbGosbShop(String tb, String gosb) {
+        return dataAllTb.getTb().stream()
+                .filter(t -> t.getCode().equals(tb))
+                .flatMap(t -> t.getGosb().stream())
+                .filter(t -> t.getCode().equals(gosb))
+                .flatMap(t -> t.getOrganization().stream())
+                .flatMap(t -> t.getContract().stream())
+                .mapToLong(t -> t.getShop().size()).sum();
+    }
+
+    enum LOOK_UP_LEVEL {
+        ORGANIZATION,
+        CONTRACT,
+        NONE
+    }
+
+    public Set<DataCubeLookUpTb> getDataLookUpByContract(RequestCubeLookUp request) {
         DataCubeLookUp lookUp = new DataCubeLookUp();
+        LOOK_UP_LEVEL lookUpLevel = LOOK_UP_LEVEL.NONE;
+        if (StringUtils.isNotEmpty(request.getContract())) {
+            lookUpLevel = LOOK_UP_LEVEL.CONTRACT;
+        } else if (StringUtils.isNotEmpty(request.getOrganization())) {
+            lookUpLevel = LOOK_UP_LEVEL.ORGANIZATION;
+        }
 
         for(DataTb tb : dataAllTb.getTb())  {
             for (DataGosb gosb : tb.getGosb()) {
                 for(DataOrganization organization: gosb.getOrganization()) {
+                    if (lookUpLevel == LOOK_UP_LEVEL.ORGANIZATION && organization.getCode().contains(request.getOrganization())) {
+                        DataCubeLookUpGosb lookUpGosb = makeTbAndGosb(lookUp, tb, gosb);
+                        DataCubeLookUpOrganization lookUpOrganization = lookUpGosb.findOrganization(organization.getCode());
+                        if (lookUpOrganization == null) {
+                            lookUpOrganization = new DataCubeLookUpOrganization(organization.getCode());
+                            lookUpGosb.getOrganizations().add(lookUpOrganization);
+                        }
+                        continue;
+                    }
+                    //
                     for (DataContract contract : organization.getContract()) {
-                        if (contract.getCode().contains(code)) {
-                            DataCubeLookUpTb cubeLookUpTb = lookUp.findTb(tb.getCode());
-                            if (cubeLookUpTb == null) {
-                                cubeLookUpTb = new DataCubeLookUpTb(tb.getCode());
-                                lookUp.getTbs().add(cubeLookUpTb);
-                            }
-
-                            DataCubeLookUpGosb lookUpGosb = cubeLookUpTb.findGosb(gosb.getCode());
-                            if (lookUpGosb == null) {
-                                lookUpGosb = new DataCubeLookUpGosb(gosb.getCode());
-                                cubeLookUpTb.getGosbs().add(lookUpGosb);
-                            }
-
-                            DataCubeLookUpOrganization lookUpOrganization = lookUpGosb.findOrganization(organization.getCode());
-                            if (lookUpOrganization == null) {
-                                lookUpOrganization = new DataCubeLookUpOrganization(organization.getCode());
-                                lookUpGosb.getOrganizations().add(lookUpOrganization);
-                            }
-
+                        if (lookUpLevel == LOOK_UP_LEVEL.CONTRACT && contract.getCode().contains(request.getContract())) {
+                            DataCubeLookUpOrganization lookUpOrganization = makeTbAndGosbAndOrganization(lookUp, tb, gosb, organization);
                             DataCubeLookUpContract lookUpContract = lookUpOrganization.findContract(contract.getCode());
                             if (lookUpContract == null) {
                                 lookUpContract = new DataCubeLookUpContract(contract.getCode());
                                 lookUpOrganization.getContracts().add(lookUpContract);
 
                             }
+                            continue;
                         }
                     }
                 }
             }
         }
         return lookUp.getTbs();
+    }
 
+    private DataCubeLookUpGosb makeTbAndGosb(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb) {
+        DataCubeLookUpTb cubeLookUpTb = lookUp.findTb(tb.getCode());
+        if (cubeLookUpTb == null) {
+            cubeLookUpTb = new DataCubeLookUpTb(tb.getCode());
+            lookUp.getTbs().add(cubeLookUpTb);
+        }
+
+        DataCubeLookUpGosb lookUpGosb = cubeLookUpTb.findGosb(gosb.getCode());
+        if (lookUpGosb == null) {
+            lookUpGosb = new DataCubeLookUpGosb(gosb.getCode());
+            cubeLookUpTb.getGosbs().add(lookUpGosb);
+        }
+        return lookUpGosb;
+    }
+
+    private DataCubeLookUpOrganization makeTbAndGosbAndOrganization(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb, DataOrganization organization) {
+        DataCubeLookUpGosb lookUpGosb = makeTbAndGosb(lookUp, tb, gosb);
+        DataCubeLookUpOrganization lookUpOrganization = lookUpGosb.findOrganization(organization.getCode());
+        if (lookUpOrganization == null) {
+            lookUpOrganization = new DataCubeLookUpOrganization(organization.getCode());
+            lookUpGosb.getOrganizations().add(lookUpOrganization);
+        }
+        return lookUpOrganization;
     }
 
     private void init() {
         if (lock.tryLock()) {
             try {
                 if (dataAllTb == null) {
-                    InputStream resourceAsStream = Main.class.getResourceAsStream("/json/data-cube.json");
+                    InputStream resourceAsStream = Main.class.getResourceAsStream("/json/cube.json");
                     String str = new String(resourceAsStream.readAllBytes());
                     dataAllTb = JsonIterator.deserialize(str, DataAllTb.class);
                 }
