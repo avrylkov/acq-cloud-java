@@ -3,7 +3,6 @@ package org.example;
 import org.example.model.RequestCubeLookUp;
 import org.example.model.deep.DataCube;
 import org.example.model.RequestCubeDeep;
-import org.example.model.up.DataCubeLookUp;
 import org.example.model.up.DataCubeLookUpTb;
 import org.example.service.CubeService;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -34,7 +33,7 @@ public class Controller {
 
     @GetMapping("/tb/{code}")
     public List<DataCube> fillAllTbGosb(@PathVariable String code) {
-        return cubeService.fillAllTbGosb(code);
+        return cubeService.fillTbGosb(code);
     }
 
     @PostMapping("/cube")

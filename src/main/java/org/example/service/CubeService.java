@@ -5,7 +5,6 @@ import org.example.model.RequestCubeLookUp;
 import org.example.model.deep.DataCube;
 import org.example.model.Metric;
 import org.example.model.RequestCubeDeep;
-import org.example.model.up.DataCubeLookUp;
 import org.example.model.up.DataCubeLookUpTb;
 
 import java.util.Collections;
@@ -39,9 +38,9 @@ public class CubeService {
         List<DataCube> dataTbList = dataProvider.fillAllTb();
         dataTbList.forEach(d -> {
             Long gosb = dataProvider.getTbGosb(d.getCode());
-            Long organization = dataProvider.getTbOrganization(d.getCode());
-            Long contract = dataProvider.getTbContract(d.getCode());
-            Long shop = dataProvider.getTbShop(d.getCode());
+            Long organization = dataProvider.getSumTbOrganization(d.getCode());
+            Long contract = dataProvider.getSumTbContract(d.getCode());
+            Long shop = dataProvider.getSumTbShop(d.getCode());
             //
             d.getMetrics().add(new Metric("ГОСБы", gosb));
             d.getMetrics().add(new Metric("Организации", organization));
@@ -51,12 +50,12 @@ public class CubeService {
         return dataTbList;
     }
 
-    public List<DataCube> fillAllTbGosb(String tb) {
-        List<DataCube> dataGosbList = dataProvider.fillAllTbGosb(tb);
+    public List<DataCube> fillTbGosb(String tb) {
+        List<DataCube> dataGosbList = dataProvider.fillTbGosb(tb);
         dataGosbList.forEach(d -> {
-            Long organization = dataProvider.getTbGosbOrganization(tb, d.getCode());
-            Long contract = dataProvider.getTbGosbContract(tb, d.getCode());
-            Long shop = dataProvider.getTbGosbShop(tb, d.getCode());
+            Long organization = dataProvider.getSumTbGosbOrganization(tb, d.getCode());
+            Long contract = dataProvider.getSumTbGosbContract(tb, d.getCode());
+            Long shop = dataProvider.getSumTbGosbShop(tb, d.getCode());
             //
             d.getMetrics().add(new Metric("Организации", organization));
             d.getMetrics().add(new Metric("Договоры", contract));
@@ -69,23 +68,39 @@ public class CubeService {
         switch (requestCubeDeep.getCode()) {
             case ALL :  return filterByCode(Collections.singletonList(getAllTb()), requestCubeDeep);
             case ALL_TB: return filterByCode(fillAllTb(), requestCubeDeep);
-            case TB: return filterByCode(fillAllTbGosb(requestCubeDeep.getTb()), requestCubeDeep);
-            case GOSB: return filterByCode(fillAllTbGosbOrganization(requestCubeDeep.getTb(), requestCubeDeep.getGosb()), requestCubeDeep);
+            case TB: return filterByCode(fillTbGosb(requestCubeDeep.getTb()), requestCubeDeep);
+            case GOSB: return filterByCode(fillTbGosbOrg(requestCubeDeep.getTb(), requestCubeDeep.getGosb()), requestCubeDeep);
+            case ORG: return filterByCode(fillTbGosbOrgContr(requestCubeDeep.getTb(), requestCubeDeep.getGosb(), requestCubeDeep.getOrg()), requestCubeDeep);
         }
         return Collections.EMPTY_LIST;
     }
 
-    private List<DataCube> fillAllTbGosbOrganization(String tb, String gosb) {
-        List<DataCube> dataOrganizationList = dataProvider.fillAllTbGosbOrganization(tb, gosb);
-        dataOrganizationList.forEach(d -> {
-            Long contract = dataProvider.getTbGosbContract(tb, d.getCode());
-            Long shop = dataProvider.getTbGosbShop(tb, d.getCode());
+    private List<DataCube> fillTbGosbOrgContr(String tb, String gosb, String org) {
+        List<DataCube> dataContractList = dataProvider.fillTbGosbOrgContr(tb, gosb, org);
+        dataContractList.forEach(contr -> {
+            Long shop = dataProvider.getSumTbGosbOrgContrShop(tb, gosb, org, contr.getCode());
             //
-            d.getMetrics().add(new Metric("Договоры", contract));
-            d.getMetrics().add(new Metric("ТСТ",shop));
+            contr.getMetrics().add(new Metric("ТСТ",shop));
         });
-        return dataOrganizationList;
+        return filterNonZeroMetric(dataContractList);
+    }
 
+    private List<DataCube> fillTbGosbOrg(String tb, String gosb) {
+        List<DataCube> dataOrganizationList = dataProvider.fillTbGosbOrg(tb, gosb);
+        dataOrganizationList.forEach(org -> {
+            Long contract = dataProvider.getSumTbGosbOrgContract(tb, gosb, org.getCode());
+            Long shop = dataProvider.getSumTbGosbOrgShop(tb, gosb, org.getCode());
+            //
+            org.getMetrics().add(new Metric("Договоры", contract));
+            org.getMetrics().add(new Metric("ТСТ",shop));
+        });
+        return filterNonZeroMetric(dataOrganizationList);
+    }
+
+    private List<DataCube>  filterNonZeroMetric(List<DataCube> data) {
+        return data.stream()
+                .filter(o -> o.getMetrics().stream().mapToLong(Metric::getValue).sum() > 0)
+                .collect(Collectors.toList());
     }
 
     /*
@@ -101,7 +116,7 @@ public class CubeService {
             return cubeList;
         }
         return cubeList.stream()
-                .filter(c -> c.getCode().contains(requestCubeDeep.getCodeFilter()))
+                .filter(c -> c.getCode().toLowerCase().contains(requestCubeDeep.getCodeFilter().toLowerCase()))
                 .collect(Collectors.toList());
     }
 

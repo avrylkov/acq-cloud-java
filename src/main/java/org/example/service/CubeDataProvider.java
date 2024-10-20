@@ -24,6 +24,7 @@ import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Slf4j
 public class CubeDataProvider implements DataProvider {
@@ -48,6 +49,7 @@ public class CubeDataProvider implements DataProvider {
                 .mapToLong(t -> t.getGosb().size())
                 .sum();
     }
+
 
     public Long getAllOrganization() {
         return dataAllTb.getTb().stream()
@@ -80,31 +82,27 @@ public class CubeDataProvider implements DataProvider {
     }
 
     public Long getTbGosb(String tb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
+        return filterTb(tb)
                 .mapToLong(t -> t.getGosb().size())
                 .sum();
     }
 
-    public Long getTbOrganization(String tb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
+    public Long getSumTbOrganization(String tb) {
+        return filterTb(tb)
                 .flatMap(t -> t.getGosb().stream())
                 .mapToLong(t -> t.getOrganization().size()).sum();
     }
 
-    public Long getTbContract(String tb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
+    public Long getSumTbContract(String tb) {
+        return filterTb(tb)
                 .flatMap(t -> t.getGosb().stream())
                 .flatMap(t -> t.getOrganization().stream())
                 .mapToLong(t -> t.getContract().size())
                 .sum();
     }
 
-    public Long getTbShop(String tb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
+    public Long getSumTbShop(String tb) {
+        return filterTb(tb)
                 .flatMap(t -> t.getGosb().stream())
                 .flatMap(t -> t.getOrganization().stream())
                 .flatMap(t -> t.getContract().stream())
@@ -116,53 +114,91 @@ public class CubeDataProvider implements DataProvider {
      *  ТБ - ГОСБ
      */
 
-    public List<DataCube> fillAllTbGosb(String tb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
+    public List<DataCube> fillTbGosb(String tb) {
+        return filterTb(tb)
                 .flatMap(t -> t.getGosb().stream())
                 .map(DataGosb::getCode)
                 .map(DataCube::new)
                 .collect(Collectors.toList());
     }
 
-    public List<DataCube> fillAllTbGosbOrganization(String tb, String gosb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
-                .flatMap(t -> t.getGosb().stream())
-                .map(DataGosb::getCode)
-                .filter(code -> code.equals(gosb))
+    public List<DataCube> fillTbGosbOrg(String tb, String gosb) {
+        return filterGosb(filterTb(tb), gosb)
+                .flatMap(g -> g.getOrganization().stream())
+                .map(DataOrganization::getCode)
+                .map(DataCube::new)
+                .collect(Collectors.toList());
+    }
+
+    private Stream<DataOrganization> filterOrg(Stream<DataGosb> dataGosbStream, String org) {
+        return dataGosbStream.flatMap(g -> g.getOrganization().stream())
+                .filter(o -> o.getCode().equals(org));
+    }
+
+    public List<DataCube> fillTbGosbOrgContr(String tb, String gosb, String org) {
+        return filterOrg(filterGosb(filterTb(tb), gosb), org)
+                .flatMap(o -> o.getContract().stream())
+                .map(DataContract::getCode)
                 .map(DataCube::new)
                 .collect(Collectors.toList());
     }
 
 
-    public Long getTbGosbOrganization(String tb, String gosb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
-                .flatMap(t -> t.getGosb().stream())
-                .filter(t -> t.getCode().equals(gosb))
-                .mapToLong(t -> t.getOrganization().size())
+    public Long getSumTbGosbOrganization(String tb, String gosb) {
+        return  filterGosb(filterTb(tb), gosb)
+                .mapToLong(g -> g.getOrganization().size())
                 .sum();
     }
 
-    public Long getTbGosbContract(String tb, String gosb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
-                .flatMap(t -> t.getGosb().stream())
-                .filter(t -> t.getCode().equals(gosb))
-                .flatMap(t -> t.getOrganization().stream())
-                .mapToLong(t -> t.getContract().size()).sum();
+    public Long getSumTbGosbContract(String tb, String gosb) {
+        return filterGosb(filterTb(tb), gosb)
+                .flatMap(g -> g.getOrganization().stream())
+                .mapToLong(o -> o.getContract().size()).sum();
     }
 
-    public Long getTbGosbShop(String tb, String gosb) {
-        return dataAllTb.getTb().stream()
-                .filter(t -> t.getCode().equals(tb))
-                .flatMap(t -> t.getGosb().stream())
-                .filter(t -> t.getCode().equals(gosb))
+    public Long getSumTbGosbShop(String tb, String gosb) {
+        return filterGosb(filterTb(tb), gosb)
                 .flatMap(t -> t.getOrganization().stream())
                 .flatMap(t -> t.getContract().stream())
                 .mapToLong(t -> t.getShop().size()).sum();
     }
+
+    public Long getSumTbGosbOrgContract(String tb, String gosb, String org) {
+        return filterOrganization(filterGosb(filterTb(tb), gosb), org)
+                .mapToLong(o -> o.getContract().size()).sum();
+    }
+
+    public Long getSumTbGosbOrgShop(String tb, String gosb, String org) {
+        return filterOrganization(filterGosb(filterTb(tb), gosb), org)
+                .flatMap(o -> o.getContract().stream())
+                .mapToLong(c -> c.getShop().size()).sum();
+    }
+
+    private Stream<DataContract> filterContract(Stream<DataOrganization> organizationStream, String contract) {
+         return organizationStream.flatMap(o -> o.getContract().stream())
+                .filter(c -> c.getCode().equals(contract));
+    }
+
+    public Long getSumTbGosbOrgContrShop(String tb, String gosb, String org, String contr) {
+        return filterContract(filterOrganization(filterGosb(filterTb(tb), gosb), org), contr)
+                .mapToLong(c -> c.getShop().size()).sum();
+    }
+
+    private Stream<DataTb> filterTb(String tb) {
+        return dataAllTb.getTb().stream()
+                .filter(t -> t.getCode().equals(tb));
+    }
+
+    private Stream<DataGosb> filterGosb(Stream<DataTb> dataTbStream, String gosb) {
+        return dataTbStream.flatMap(t -> t.getGosb().stream())
+                .filter(g -> g.getCode().equals(gosb));
+    }
+
+    private Stream<DataOrganization> filterOrganization(Stream<DataGosb> dataGosbStream, String organization) {
+        return dataGosbStream.flatMap(g -> g.getOrganization().stream())
+                .filter(o -> o.getCode().equals(organization));
+    }
+
 
     enum LOOK_UP_LEVEL {
         ORGANIZATION,

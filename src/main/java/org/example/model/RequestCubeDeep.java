@@ -9,5 +9,6 @@ public class RequestCubeDeep {
     private String codeFilter;
     private String tb;
     private String gosb;
+    private String org;
 
 }
