@@ -1,49 +1,34 @@
 package org.example;
 
 import org.example.model.RequestCubeLookUp;
-import org.example.model.deep.DataCube;
-import org.example.model.RequestCubeDeep;
+import org.example.model.deep.PageData;
+import org.example.model.deep.RequestCubeDeep;
 import org.example.model.up.DataCubeLookUpTb;
-import org.example.service.CubeService;
+import org.example.service.CubeDeepService;
+import org.example.service.CubeLookUpService;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.Set;
 
 @CrossOrigin(maxAge = 3600)
 @RestController
 public class Controller {
 
-    private CubeService cubeService = new CubeService();
+    private CubeDeepService cubeDeepService = new CubeDeepService();
+    private CubeLookUpService cubeLookUpService = new CubeLookUpService();
 
-    @GetMapping("/all-tb")
-    public DataCube allTb() {
-        return cubeService.getAllTb();
-    }
 
-    @GetMapping("/fill-all-tb")
-    public List<DataCube> fillAllTb() {
-       return cubeService.fillAllTb();
-    }
-
-    @GetMapping("/tb/{code}")
-    public List<DataCube> fillAllTbGosb(@PathVariable String code) {
-        return cubeService.fillTbGosb(code);
-    }
-
-    @PostMapping("/cube")
-    public List<DataCube> getCube(@RequestBody RequestCubeDeep requestCubeDeep) {
-       return cubeService.getDataCube(requestCubeDeep);
+    @PostMapping("/deep")
+    public PageData getCubeDeep(@RequestBody RequestCubeDeep requestCubeDeep) {
+       return cubeDeepService.getDataCubeDeep(requestCubeDeep);
    }
 
     @PostMapping("/look-up")
-    public Set<DataCubeLookUpTb> getCube(@RequestBody RequestCubeLookUp requestCubeLookUp) {
-       return cubeService.getDataLookUpByContract(requestCubeLookUp);
+    public Set<DataCubeLookUpTb> getCubeLookUp(@RequestBody RequestCubeLookUp requestCubeLookUp) {
+       return cubeLookUpService.getDataLookUp(requestCubeLookUp);
    }
 
 

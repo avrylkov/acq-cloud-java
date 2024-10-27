@@ -2,25 +2,17 @@ package org.example.service;
 
 import com.jsoniter.JsonIterator;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.example.Main;
-import org.example.model.RequestCubeLookUp;
 import org.example.model.deep.DataAllTb;
 import org.example.model.deep.DataContract;
 import org.example.model.deep.DataCube;
 import org.example.model.deep.DataGosb;
 import org.example.model.deep.DataOrganization;
 import org.example.model.deep.DataTb;
-import org.example.model.up.DataCubeLookUp;
-import org.example.model.up.DataCubeLookUpContract;
-import org.example.model.up.DataCubeLookUpGosb;
-import org.example.model.up.DataCubeLookUpOrganization;
-import org.example.model.up.DataCubeLookUpTb;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -36,9 +28,9 @@ public class CubeDataProvider implements DataProvider {
         init();
     }
 
-    /*
-          ТБ
-     */
+    public List<DataTb> getTb() {
+       return dataAllTb.getTb();
+    }
 
     public Long getAllTb() {
         return Long.valueOf(dataAllTb.getTb().size());
@@ -199,77 +191,6 @@ public class CubeDataProvider implements DataProvider {
                 .filter(o -> o.getCode().equals(organization));
     }
 
-
-    enum LOOK_UP_LEVEL {
-        ORGANIZATION,
-        CONTRACT,
-        NONE
-    }
-
-    public Set<DataCubeLookUpTb> getDataLookUpByContract(RequestCubeLookUp request) {
-        DataCubeLookUp lookUp = new DataCubeLookUp();
-        LOOK_UP_LEVEL lookUpLevel = LOOK_UP_LEVEL.NONE;
-        if (StringUtils.isNotEmpty(request.getContract())) {
-            lookUpLevel = LOOK_UP_LEVEL.CONTRACT;
-        } else if (StringUtils.isNotEmpty(request.getOrganization())) {
-            lookUpLevel = LOOK_UP_LEVEL.ORGANIZATION;
-        }
-
-        for(DataTb tb : dataAllTb.getTb())  {
-            for (DataGosb gosb : tb.getGosb()) {
-                for(DataOrganization organization: gosb.getOrganization()) {
-                    if (lookUpLevel == LOOK_UP_LEVEL.ORGANIZATION && organization.getCode().contains(request.getOrganization())) {
-                        DataCubeLookUpGosb lookUpGosb = makeTbAndGosb(lookUp, tb, gosb);
-                        DataCubeLookUpOrganization lookUpOrganization = lookUpGosb.findOrganization(organization.getCode());
-                        if (lookUpOrganization == null) {
-                            lookUpOrganization = new DataCubeLookUpOrganization(organization.getCode());
-                            lookUpGosb.getOrganizations().add(lookUpOrganization);
-                        }
-                        continue;
-                    }
-                    //
-                    for (DataContract contract : organization.getContract()) {
-                        if (lookUpLevel == LOOK_UP_LEVEL.CONTRACT && contract.getCode().contains(request.getContract())) {
-                            DataCubeLookUpOrganization lookUpOrganization = makeTbAndGosbAndOrganization(lookUp, tb, gosb, organization);
-                            DataCubeLookUpContract lookUpContract = lookUpOrganization.findContract(contract.getCode());
-                            if (lookUpContract == null) {
-                                lookUpContract = new DataCubeLookUpContract(contract.getCode());
-                                lookUpOrganization.getContracts().add(lookUpContract);
-
-                            }
-                            continue;
-                        }
-                    }
-                }
-            }
-        }
-        return lookUp.getTbs();
-    }
-
-    private DataCubeLookUpGosb makeTbAndGosb(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb) {
-        DataCubeLookUpTb cubeLookUpTb = lookUp.findTb(tb.getCode());
-        if (cubeLookUpTb == null) {
-            cubeLookUpTb = new DataCubeLookUpTb(tb.getCode());
-            lookUp.getTbs().add(cubeLookUpTb);
-        }
-
-        DataCubeLookUpGosb lookUpGosb = cubeLookUpTb.findGosb(gosb.getCode());
-        if (lookUpGosb == null) {
-            lookUpGosb = new DataCubeLookUpGosb(gosb.getCode());
-            cubeLookUpTb.getGosbs().add(lookUpGosb);
-        }
-        return lookUpGosb;
-    }
-
-    private DataCubeLookUpOrganization makeTbAndGosbAndOrganization(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb, DataOrganization organization) {
-        DataCubeLookUpGosb lookUpGosb = makeTbAndGosb(lookUp, tb, gosb);
-        DataCubeLookUpOrganization lookUpOrganization = lookUpGosb.findOrganization(organization.getCode());
-        if (lookUpOrganization == null) {
-            lookUpOrganization = new DataCubeLookUpOrganization(organization.getCode());
-            lookUpGosb.getOrganizations().add(lookUpOrganization);
-        }
-        return lookUpOrganization;
-    }
 
     private void init() {
         if (lock.tryLock()) {

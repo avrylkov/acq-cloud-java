@@ -1,18 +1,18 @@
 package org.example.service;
 
 import org.apache.commons.lang3.StringUtils;
-import org.example.model.RequestCubeLookUp;
 import org.example.model.deep.DataCube;
 import org.example.model.Metric;
-import org.example.model.RequestCubeDeep;
-import org.example.model.up.DataCubeLookUpTb;
+import org.example.model.deep.PageInfo;
+import org.example.model.deep.RequestCubeDeep;
+import org.example.model.deep.PageData;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-public class CubeService {
+public class CubeDeepService {
 
     private CubeDataProvider dataProvider = new CubeDataProvider();
 
@@ -64,15 +64,15 @@ public class CubeService {
         return dataGosbList;
     }
 
-    public List<DataCube> getDataCube(RequestCubeDeep requestCubeDeep) {
+    public PageData getDataCubeDeep(@NotNull RequestCubeDeep requestCubeDeep) {
         switch (requestCubeDeep.getCode()) {
-            case ALL :  return filterByCode(Collections.singletonList(getAllTb()), requestCubeDeep);
-            case ALL_TB: return filterByCode(fillAllTb(), requestCubeDeep);
-            case TB: return filterByCode(fillTbGosb(requestCubeDeep.getTb()), requestCubeDeep);
-            case GOSB: return filterByCode(fillTbGosbOrg(requestCubeDeep.getTb(), requestCubeDeep.getGosb()), requestCubeDeep);
-            case ORG: return filterByCode(fillTbGosbOrgContr(requestCubeDeep.getTb(), requestCubeDeep.getGosb(), requestCubeDeep.getOrg()), requestCubeDeep);
+            case ALL :  return pagination(filterByCode(Collections.singletonList(getAllTb()), requestCubeDeep), requestCubeDeep.getPageInfo());
+            case ALL_TB: return pagination(filterByCode(fillAllTb(), requestCubeDeep), requestCubeDeep.getPageInfo());
+            case TB: return pagination(filterByCode(fillTbGosb(requestCubeDeep.getTb()), requestCubeDeep), requestCubeDeep.getPageInfo());
+            case GOSB: return pagination(filterByCode(fillTbGosbOrg(requestCubeDeep.getTb(), requestCubeDeep.getGosb()), requestCubeDeep), requestCubeDeep.getPageInfo());
+            case ORG: return pagination(filterByCode(fillTbGosbOrgContr(requestCubeDeep.getTb(), requestCubeDeep.getGosb(), requestCubeDeep.getOrg()), requestCubeDeep), requestCubeDeep.getPageInfo());
         }
-        return Collections.EMPTY_LIST;
+        return new PageData(0);
     }
 
     private List<DataCube> fillTbGosbOrgContr(String tb, String gosb, String org) {
@@ -103,14 +103,6 @@ public class CubeService {
                 .collect(Collectors.toList());
     }
 
-    /*
-     *    Look UP
-     */
-    public Set<DataCubeLookUpTb> getDataLookUpByContract(RequestCubeLookUp requestCubeLookUp) {
-        return dataProvider.getDataLookUpByContract(requestCubeLookUp);
-
-    }
-
     private List<DataCube> filterByCode(List<DataCube> cubeList, RequestCubeDeep requestCubeDeep) {
         if (StringUtils.isEmpty(requestCubeDeep.getCodeFilter())) {
             return cubeList;
@@ -118,6 +110,19 @@ public class CubeService {
         return cubeList.stream()
                 .filter(c -> c.getCode().toLowerCase().contains(requestCubeDeep.getCodeFilter().toLowerCase()))
                 .collect(Collectors.toList());
+    }
+
+
+    private PageData pagination(List<DataCube> dataCubes, PageInfo pageInfo) {
+        int startIndex = (pageInfo.getPageNumber() - 1) * pageInfo.getPageSize();
+        int endIndex = Math.min(startIndex + pageInfo.getPageSize(), dataCubes.size());
+
+        PageData pageData = new PageData(dataCubes.size());
+        pageData.setDataCubes(dataCubes.stream()
+                .skip(startIndex)
+                .limit(endIndex - startIndex)
+                .collect(Collectors.toList()));
+        return pageData;
     }
 
 }

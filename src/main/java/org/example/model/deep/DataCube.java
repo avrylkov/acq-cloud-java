@@ -9,11 +9,7 @@ import java.util.List;
 @Data
 public class DataCube {
 
-    public DataCube(String code) {
-        this.code = code;
-    }
-
-    private String code;
+    private final String code;
     private List<Metric> metrics = new ArrayList<>();
 
 }
