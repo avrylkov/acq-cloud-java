@@ -12,5 +12,7 @@ public class RequestCubeDeep {
     private String tb;
     private String gosb;
     private String org;
+    private String contract;
+    private String shop;
 
 }

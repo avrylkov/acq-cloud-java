@@ -24,12 +24,14 @@ public class CubeDeepService {
         Long organization = dataProvider.getAllOrganization();
         Long contract = dataProvider.getAllContract();
         Long shop = dataProvider.getAllShop();
+        Long terminal = dataProvider.getAllTerminal();
         //
         dataCube.getMetrics().add(new Metric("ТБ", tb));
         dataCube.getMetrics().add(new Metric("ГОСБы", gosb));
         dataCube.getMetrics().add(new Metric("Организации", organization));
         dataCube.getMetrics().add(new Metric("Договоры", contract));
         dataCube.getMetrics().add(new Metric("ТСТ", shop));
+        dataCube.getMetrics().add(new Metric("Терминалы", terminal));
         //
         return dataCube;
     }
@@ -41,11 +43,13 @@ public class CubeDeepService {
             Long organization = dataProvider.getSumTbOrganization(d.getCode());
             Long contract = dataProvider.getSumTbContract(d.getCode());
             Long shop = dataProvider.getSumTbShop(d.getCode());
+            Long terminal = dataProvider.getSumTbTerminal(d.getCode());
             //
             d.getMetrics().add(new Metric("ГОСБы", gosb));
             d.getMetrics().add(new Metric("Организации", organization));
             d.getMetrics().add(new Metric("Договоры", contract));
             d.getMetrics().add(new Metric("ТСТ", shop));
+            d.getMetrics().add(new Metric("Терминалы", terminal));
         });
         return dataTbList;
     }
@@ -56,31 +60,51 @@ public class CubeDeepService {
             Long organization = dataProvider.getSumTbGosbOrganization(tb, d.getCode());
             Long contract = dataProvider.getSumTbGosbContract(tb, d.getCode());
             Long shop = dataProvider.getSumTbGosbShop(tb, d.getCode());
+            Long terminal = dataProvider.getSumTbGosbTerminal(tb, d.getCode());
             //
             d.getMetrics().add(new Metric("Организации", organization));
             d.getMetrics().add(new Metric("Договоры", contract));
             d.getMetrics().add(new Metric("ТСТ",shop));
+            d.getMetrics().add(new Metric("Терминалы",terminal));
         });
         return dataGosbList;
     }
 
-    public PageData getDataCubeDeep(@NotNull RequestCubeDeep requestCubeDeep) {
-        switch (requestCubeDeep.getCode()) {
-            case ALL :  return pagination(filterByCode(Collections.singletonList(getAllTb()), requestCubeDeep), requestCubeDeep.getPageInfo());
-            case ALL_TB: return pagination(filterByCode(fillAllTb(), requestCubeDeep), requestCubeDeep.getPageInfo());
-            case TB: return pagination(filterByCode(fillTbGosb(requestCubeDeep.getTb()), requestCubeDeep), requestCubeDeep.getPageInfo());
-            case GOSB: return pagination(filterByCode(fillTbGosbOrg(requestCubeDeep.getTb(), requestCubeDeep.getGosb()), requestCubeDeep), requestCubeDeep.getPageInfo());
-            case ORG: return pagination(filterByCode(fillTbGosbOrgContr(requestCubeDeep.getTb(), requestCubeDeep.getGosb(), requestCubeDeep.getOrg()), requestCubeDeep), requestCubeDeep.getPageInfo());
+    public PageData getDataCubeDeep(@NotNull RequestCubeDeep rq) {
+        switch (rq.getCode()) {
+            case ALL :  return pagination(Collections.singletonList(getAllTb()), rq.getPageInfo());
+            case ALL_TB: return pagination(filterByCode(fillAllTb(), rq), rq.getPageInfo());
+            case TB: return pagination(filterByCode(fillTbGosb(rq.getTb()), rq), rq.getPageInfo());
+            case GOSB: return pagination(filterByCode(fillTbGosbOrg(rq.getTb(), rq.getGosb()), rq), rq.getPageInfo());
+            case ORG: return pagination(filterByCode(fillTbGosbOrgContr(rq.getTb(), rq.getGosb(), rq.getOrg()), rq), rq.getPageInfo());
+            case CONTRACT: return pagination(filterByCode(fillTbGosbOrgContrShop(rq.getTb(), rq.getGosb(), rq.getOrg(), rq.getContract()), rq), rq.getPageInfo());
+            case SHOP: return pagination(filterByCode(fillTbGosbOrgContrShopTerminal(rq.getTb(), rq.getGosb(), rq.getOrg(), rq.getContract(), rq.getShop()), rq), rq.getPageInfo());
         }
         return new PageData(0);
+    }
+
+    private List<DataCube> fillTbGosbOrgContrShopTerminal(String tb, String gosb, String org, String contract, String shop) {
+        return dataProvider.fillTbGosbOrgContrShopTerminal(tb, gosb, org, contract, shop);
+    }
+
+    private List<DataCube> fillTbGosbOrgContrShop(String tb, String gosb, String org, String contract) {
+        List<DataCube> dataShopList = dataProvider.fillTbGosbOrgContrShop(tb, gosb, org, contract);
+        dataShopList.forEach(shop -> {
+            Long terminal = dataProvider.getSumTbGosbOrgContrShopTerminal(tb, gosb, org, contract, shop.getCode());
+            //
+            shop.getMetrics().add(new Metric("Терминалы", terminal));
+        });
+        return filterNonZeroMetric(dataShopList);
     }
 
     private List<DataCube> fillTbGosbOrgContr(String tb, String gosb, String org) {
         List<DataCube> dataContractList = dataProvider.fillTbGosbOrgContr(tb, gosb, org);
         dataContractList.forEach(contr -> {
             Long shop = dataProvider.getSumTbGosbOrgContrShop(tb, gosb, org, contr.getCode());
+            Long terminal = dataProvider.getSumTbGosbOrgContrTerminal(tb, gosb, org, contr.getCode());
             //
             contr.getMetrics().add(new Metric("ТСТ",shop));
+            contr.getMetrics().add(new Metric("Терминалы",terminal));
         });
         return filterNonZeroMetric(dataContractList);
     }
@@ -90,9 +114,11 @@ public class CubeDeepService {
         dataOrganizationList.forEach(org -> {
             Long contract = dataProvider.getSumTbGosbOrgContract(tb, gosb, org.getCode());
             Long shop = dataProvider.getSumTbGosbOrgShop(tb, gosb, org.getCode());
+            Long terminal = dataProvider.getSumTbGosbOrgTerminal(tb, gosb, org.getCode());
             //
             org.getMetrics().add(new Metric("Договоры", contract));
             org.getMetrics().add(new Metric("ТСТ",shop));
+            org.getMetrics().add(new Metric("Терминалы",terminal));
         });
         return filterNonZeroMetric(dataOrganizationList);
     }

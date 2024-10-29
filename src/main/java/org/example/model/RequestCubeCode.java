@@ -6,5 +6,7 @@ public enum RequestCubeCode {
     ALL_TB,
     TB,
     GOSB,
-    ORG
+    ORG,
+    CONTRACT,
+    SHOP
 }

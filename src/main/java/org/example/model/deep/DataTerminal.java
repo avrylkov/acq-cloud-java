@@ -7,9 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class DataShop {
+public class DataTerminal {
 
     private String code;
-    private List<Metric> metrics = new ArrayList<>();
-    private List<DataTerminal> terminal = new ArrayList<>();
 }
