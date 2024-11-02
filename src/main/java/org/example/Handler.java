@@ -2,12 +2,14 @@ package org.example;
 
 import com.jsoniter.JsonIterator;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Base64Util;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 import java.util.Formatter;
 import java.util.HashMap;
 import java.util.Map;
@@ -24,21 +26,26 @@ public class Handler implements Function<Request, Response> {
     @Override
     public Response apply(Request request) {
         Map<String, String> headers = new HashMap<>();
-        headers.put("Content-Type", "text/plain");
+        headers.put("Content-Type", "application/json"); // "application/json text/plain"
 
 //        String name = request.queryStringParameters.get("name");
 //        return new Response(statusCode, headers, isBase64Encoded, String.format("Hello, %s!", name));
 
         InputStream resourceAsStream = Main.class.getResourceAsStream("/json/data.json");
-        String str = null;
+        String strResource = null;
         try {
-            str = new String(resourceAsStream.readAllBytes());
-            Request request2 = JsonIterator.deserialize(str, Request.class);
-            log.info(request2.toString());
-            return new Response(statusCode, headers, isBase64Encoded, String.format("Hello, %s!. time=%s",
-                    request2.getQueryStringParameters().get("name"), formatter.format(localDate)));
-        } catch (IOException e) {
-            return new Response(statusCode, headers, isBase64Encoded, String.format("Hello, %s!", e.getMessage()));
+            String body = request.getBody();
+            //String body = new String(Base64.getDecoder().decode(request.getBody()));
+            strResource = new String(resourceAsStream.readAllBytes());
+            Request requestResource = JsonIterator.deserialize(strResource, Request.class);
+            return new Response(statusCode, headers, isBase64Encoded, String.format("Hello, %s, %s!. time=%s",
+                    requestResource.getQueryStringParameters().get("name"),
+                    body,
+                    formatter.format(localDate))
+            );
+        } catch (Exception e) {
+            log.error("err", e);
+            return new Response(statusCode, headers, isBase64Encoded, String.format("Error, %s!", e.getMessage()));
         }
     }
 }
