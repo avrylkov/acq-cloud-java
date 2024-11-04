@@ -9,5 +9,6 @@ public class RequestCubeLookUp {
     private String gosb;
     private String organization;
     private String contract;
+    private String shop;
 
 }

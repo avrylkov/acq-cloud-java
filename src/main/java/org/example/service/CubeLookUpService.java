@@ -5,11 +5,13 @@ import org.example.model.RequestCubeLookUp;
 import org.example.model.deep.DataContract;
 import org.example.model.deep.DataGosb;
 import org.example.model.deep.DataOrganization;
+import org.example.model.deep.DataShop;
 import org.example.model.deep.DataTb;
 import org.example.model.up.DataCubeLookUp;
 import org.example.model.up.DataCubeLookUpContract;
 import org.example.model.up.DataCubeLookUpGosb;
 import org.example.model.up.DataCubeLookUpOrganization;
+import org.example.model.up.DataCubeLookUpShop;
 import org.example.model.up.DataCubeLookUpTb;
 
 import java.util.Set;
@@ -21,6 +23,7 @@ public class CubeLookUpService {
     enum LOOK_UP_LEVEL {
         ORGANIZATION,
         CONTRACT,
+        SHOP,
         NONE
     }
 
@@ -31,6 +34,8 @@ public class CubeLookUpService {
             lookUpLevel = LOOK_UP_LEVEL.CONTRACT;
         } else if (StringUtils.isNotEmpty(request.getOrganization())) {
             lookUpLevel = LOOK_UP_LEVEL.ORGANIZATION;
+        } else if (StringUtils.isNotEmpty(request.getShop())) {
+            lookUpLevel = LOOK_UP_LEVEL.SHOP;
         }
 
         for(DataTb tb : cubeDataProvider.getTb())  {
@@ -57,11 +62,32 @@ public class CubeLookUpService {
                             }
                             continue;
                         }
+                        for (DataShop shop : contract.getShop()) {
+                            if (lookUpLevel == LOOK_UP_LEVEL.SHOP && shop.getCode().contains(request.getShop())) {
+                                DataCubeLookUpContract lookUpContract = makeTbAndGosbAndOrganizationAndContract(lookUp, tb, gosb, organization, contract);
+                                DataCubeLookUpShop lookUpShop = lookUpContract.findShop(shop.getCode());
+                                if (lookUpShop == null) {
+                                    lookUpShop = new DataCubeLookUpShop(shop.getCode());
+                                    lookUpContract.getShops().add(lookUpShop);
+                                }
+                                continue;
+                            }
+                        }
                     }
                 }
             }
         }
         return lookUp.getTbs();
+    }
+
+    private DataCubeLookUpContract makeTbAndGosbAndOrganizationAndContract(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb, DataOrganization organization, DataContract contract) {
+        DataCubeLookUpOrganization lookUpOrganization = makeTbAndGosbAndOrganization(lookUp, tb, gosb, organization);
+        DataCubeLookUpContract lookUpContract = lookUpOrganization.findContract(contract.getCode());
+        if (lookUpContract == null) {
+            lookUpContract = new DataCubeLookUpContract(contract.getCode());
+            lookUpOrganization.getContracts().add(lookUpContract);
+        }
+        return lookUpContract;
     }
 
     private DataCubeLookUpOrganization makeTbAndGosbAndOrganization(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb, DataOrganization organization) {
