@@ -5,7 +5,7 @@ import org.example.model.deep.DataCube;
 import org.example.model.Metric;
 import org.example.model.deep.PageInfo;
 import org.example.model.deep.RequestCubeDeep;
-import org.example.model.deep.PageData;
+import org.example.model.deep.PageDataDeep;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -70,7 +70,7 @@ public class CubeDeepService {
         return dataGosbList;
     }
 
-    public PageData getDataCubeDeep(@NotNull RequestCubeDeep rq) {
+    public PageDataDeep getDataCubeDeep(@NotNull RequestCubeDeep rq) {
         switch (rq.getCode()) {
             case ALL :  return pagination(Collections.singletonList(getAllTb()), rq.getPageInfo());
             case ALL_TB: return pagination(filterByCode(fillAllTb(), rq), rq.getPageInfo());
@@ -80,7 +80,7 @@ public class CubeDeepService {
             case CONTRACT: return pagination(filterByCode(fillTbGosbOrgContrShop(rq.getTb(), rq.getGosb(), rq.getOrg(), rq.getContract()), rq), rq.getPageInfo());
             case SHOP: return pagination(filterByCode(fillTbGosbOrgContrShopTerminal(rq.getTb(), rq.getGosb(), rq.getOrg(), rq.getContract(), rq.getShop()), rq), rq.getPageInfo());
         }
-        return new PageData(0);
+        return new PageDataDeep(0);
     }
 
     private List<DataCube> fillTbGosbOrgContrShopTerminal(String tb, String gosb, String org, String contract, String shop) {
@@ -139,16 +139,11 @@ public class CubeDeepService {
     }
 
 
-    private PageData pagination(List<DataCube> dataCubes, PageInfo pageInfo) {
-        int startIndex = (pageInfo.getPageNumber() - 1) * pageInfo.getPageSize();
-        int endIndex = Math.min(startIndex + pageInfo.getPageSize(), dataCubes.size());
-
-        PageData pageData = new PageData(dataCubes.size());
-        pageData.setDataCubes(dataCubes.stream()
-                .skip(startIndex)
-                .limit(endIndex - startIndex)
-                .collect(Collectors.toList()));
-        return pageData;
+    private PageDataDeep pagination(List<DataCube> dataCubes, PageInfo pageInfo) {
+        List<DataCube> pagination = dataProvider.pagination(dataCubes, pageInfo);
+        PageDataDeep pageDataDeep = new PageDataDeep(dataCubes.size());
+        pageDataDeep.setDataCubes(pagination);
+        return pageDataDeep;
     }
 
 }

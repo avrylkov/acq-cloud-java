@@ -2,16 +2,16 @@ package org.example;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.model.deep.DataCube;
-import org.example.model.deep.PageData;
+import org.example.model.deep.PageDataDeep;
 import org.example.model.deep.RequestCubeDeep;
 import org.example.service.CubeDeepService;
 
 import java.util.function.Function;
 
 @Slf4j
-public class HandlerDeep implements Function<RequestCubeDeep, PageData> {
+public class HandlerDeep implements Function<RequestCubeDeep, PageDataDeep> {
 
-    private CubeDeepService cubeDeepService = new CubeDeepService();
+    private final CubeDeepService cubeDeepService = new CubeDeepService();
 
     /*
       private static LocalDateTime localDate = LocalDateTime.now();
@@ -22,14 +22,14 @@ public class HandlerDeep implements Function<RequestCubeDeep, PageData> {
      */
 
     @Override
-    public PageData apply(RequestCubeDeep request) {
+    public PageDataDeep apply(RequestCubeDeep request) {
         try {
             return cubeDeepService.getDataCubeDeep(request);
         } catch (Exception e) {
             log.error("Exception", e);
-            PageData pageData = new PageData(0);
-            pageData.getDataCubes().add(new DataCube(e.getMessage()));
-            return pageData;
+            PageDataDeep pageDataDeep = new PageDataDeep(0);
+            pageDataDeep.getDataCubes().add(new DataCube(e.getMessage()));
+            return pageDataDeep;
         }
     }
 }

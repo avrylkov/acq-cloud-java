@@ -11,11 +11,16 @@ import org.example.model.deep.DataOrganization;
 import org.example.model.deep.DataShop;
 import org.example.model.deep.DataTb;
 import org.example.model.deep.DataTerminal;
+import org.example.model.deep.PageInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -125,6 +130,16 @@ public class CubeDataProvider implements DataProvider {
                 .flatMap(g -> g.getOrganization().stream())
                 .map(DataOrganization::getCode)
                 .map(DataCube::new)
+                .collect(Collectors.toList());
+    }
+
+    public  <T> List<T> pagination(List<T> dataCubes, PageInfo pageInfo) {
+        int startIndex = (pageInfo.getPageNumber() - 1) * pageInfo.getPageSize();
+        int endIndex = Math.min(startIndex + pageInfo.getPageSize(), dataCubes.size());
+
+        return dataCubes.stream()
+                .skip(startIndex)
+                .limit(endIndex - startIndex)
                 .collect(Collectors.toList());
     }
 
@@ -276,16 +291,43 @@ public class CubeDataProvider implements DataProvider {
     private void init() {
         if (lock.tryLock()) {
             try {
-                SecureRandom secureRandom = new SecureRandom();
                 if (dataAllTb == null) {
+                    LocalDateTime start = LocalDateTime.now();
+                    log.info("start init");
+                    SecureRandom secureRandom = new SecureRandom();
+                    Set<String> keys = new HashSet<>(30_000);
+
                     InputStream resourceAsStream = Main.class.getResourceAsStream("/json/cube.json");
                     String str = new String(resourceAsStream.readAllBytes());
                     dataAllTb = JsonIterator.deserialize(str, DataAllTb.class);
                     dataAllTb.getTb().stream()
                             .flatMap(t -> t.getGosb().stream())
                             .flatMap(g -> g.getOrganization().stream())
+                            .peek(o -> {
+                                if (keys.contains(o.getCode())) {
+                                    o.setCode(o.getCode() + "#" + secureRandom.nextInt());
+                                } else {
+                                    keys.add(o.getCode());
+                                }
+                            })
                             .flatMap(o -> o.getContract().stream())
-                            .forEach(c -> c.setCode(c.getCode() + "#" + secureRandom.nextInt()));
+                            .peek(c -> {
+                                if (keys.contains(c.getCode())) {
+                                    c.setCode(c.getCode() + "#" + secureRandom.nextInt());
+                                } else {
+                                    keys.add(c.getCode());
+                                }
+                            })
+                            .flatMap(c -> c.getShop().stream())
+                            .forEach(s -> {
+                                if (keys.contains(s.getCode())) {
+                                    s.setCode(s.getCode() + "#" + secureRandom.nextInt());
+                                } else {
+                                    keys.add(s.getCode());
+                                }
+                            });
+                    Duration duration = Duration.between(start, LocalDateTime.now());
+                    log.info("end init duration: {}", duration.toMillis());
                 }
             } catch (IOException e) {
                 log.error("init", e);

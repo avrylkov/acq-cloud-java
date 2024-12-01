@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Data
-public class PageData {
+public class PageDataDeep {
 
     private final Integer total;
     private List<DataCube> dataCubes = new ArrayList<>();

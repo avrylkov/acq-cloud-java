@@ -3,7 +3,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.HandlerDeep;
 import org.example.Main;
 import org.example.model.deep.DataAllTb;
-import org.example.model.deep.PageData;
+import org.example.model.deep.PageDataDeep;
 import org.example.model.deep.RequestCubeDeep;
 import org.junit.Test;
 
@@ -20,7 +20,7 @@ public class TestUnit {
         HandlerDeep handlerDeep = new HandlerDeep();
         RequestCubeDeep request = new RequestCubeDeep();
         request.setTb("10");
-        PageData response = handlerDeep.apply(request);
+        PageDataDeep response = handlerDeep.apply(request);
         log.info(response.toString());
         assertNotNull(response);
     }
