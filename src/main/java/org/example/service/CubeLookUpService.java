@@ -26,41 +26,41 @@ public class CubeLookUpService {
 
     private CubeDataProvider cubeDataProvider = new CubeDataProvider();
 
-    enum LOOK_UP_LEVEL {
-        ORGANIZATION,
-        CONTRACT,
-        SHOP,
-        TERMINAL,
-        NONE
-    }
-
     public PageDataLookUp getDataLookUp(RequestCubeLookUp request) {
         DataCubeLookUp lookUp = new DataCubeLookUp();
-        LOOK_UP_LEVEL lookUpLevel = getLookUpLevel(request);
-        if (lookUpLevel == LOOK_UP_LEVEL.NONE) {
+        RequestCubeLookUp.LOOK_UP_LEVEL lookUpLevel = request.getLevel();
+        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.NONE) {
             return new PageDataLookUp(0);
         }
 
-        for(DataTb tb : cubeDataProvider.getTb())  {
+        for (DataTb tb : cubeDataProvider.getTb()) {
+            if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.TB && tb.getCode().contains(request.getCode())) {
+                addLookUpTb(lookUp, tb);
+                continue;
+            }
             for (DataGosb gosb : tb.getGosb()) {
-                for(DataOrganization organization: gosb.getOrganization()) {
-                    if (lookUpLevel == LOOK_UP_LEVEL.ORGANIZATION && organization.getCode().contains(request.getOrganization())) {
+                if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.GOSB && gosb.getCode().contains(request.getCode())) {
+                    addLookUpGosb(lookUp, tb, gosb);
+                    continue;
+                }
+                for (DataOrganization organization : gosb.getOrganization()) {
+                    if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.ORGANIZATION && organization.getCode().contains(request.getCode())) {
                         addLookUpOrganization(lookUp, tb, gosb, organization);
                         continue;
                     }
                     //
                     for (DataContract contract : organization.getContract()) {
-                        if (lookUpLevel == LOOK_UP_LEVEL.CONTRACT && contract.getCode().contains(request.getContract())) {
+                        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.CONTRACT && contract.getCode().contains(request.getCode())) {
                             addLookUpContract(lookUp, tb, gosb, organization, contract);
                             continue;
                         }
                         for (DataShop shop : contract.getShop()) {
-                            if (lookUpLevel == LOOK_UP_LEVEL.SHOP && shop.getCode().contains(request.getShop())) {
+                            if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.SHOP && shop.getCode().contains(request.getCode())) {
                                 addLookUpShop(lookUp, tb, gosb, organization, contract, shop);
                                 continue;
                             }
-                            for (DataTerminal terminal: shop.getTerminal()) {
-                                if (lookUpLevel == LOOK_UP_LEVEL.TERMINAL && terminal.getCode().contains(request.getTerminal())) {
+                            for (DataTerminal terminal : shop.getTerminal()) {
+                                if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.TERMINAL && terminal.getCode().contains(request.getCode())) {
                                     addLookUpTerminal(lookUp, tb, gosb, organization, contract, shop, terminal);
                                     continue;
                                 }
@@ -71,19 +71,6 @@ public class CubeLookUpService {
             }
         }
         return pagination(lookUp.getTbs(), request.getPageInfo(), lookUpLevel);
-    }
-
-    private LOOK_UP_LEVEL getLookUpLevel(RequestCubeLookUp request) {
-        if (StringUtils.isNotEmpty(request.getContract())) {
-            return LOOK_UP_LEVEL.CONTRACT;
-        } else if (StringUtils.isNotEmpty(request.getOrganization())) {
-            return LOOK_UP_LEVEL.ORGANIZATION;
-        } else if (StringUtils.isNotEmpty(request.getShop())) {
-            return LOOK_UP_LEVEL.SHOP;
-        } else if (StringUtils.isNotEmpty(request.getTerminal())) {
-            return LOOK_UP_LEVEL.TERMINAL;
-        }
-        return LOOK_UP_LEVEL.NONE;
     }
 
     private DataCubeLookUpOrganization addLookUpOrganization(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb, DataOrganization organization) {
@@ -125,12 +112,17 @@ public class CubeLookUpService {
         }
     }
 
-    private DataCubeLookUpGosb addLookUpGosb(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb) {
+    private DataCubeLookUpTb addLookUpTb(DataCubeLookUp lookUp, DataTb tb) {
         DataCubeLookUpTb cubeLookUpTb = lookUp.findTb(tb.getCode());
         if (cubeLookUpTb == null) {
             cubeLookUpTb = new DataCubeLookUpTb(tb.getCode());
             lookUp.getTbs().add(cubeLookUpTb);
         }
+        return cubeLookUpTb;
+    }
+
+    private DataCubeLookUpGosb addLookUpGosb(DataCubeLookUp lookUp, DataTb tb, DataGosb gosb) {
+        DataCubeLookUpTb cubeLookUpTb = addLookUpTb(lookUp, tb);
 
         DataCubeLookUpGosb lookUpGosb = cubeLookUpTb.findGosb(gosb.getCode());
         if (lookUpGosb == null) {
@@ -140,7 +132,7 @@ public class CubeLookUpService {
         return lookUpGosb;
     }
 
-    private PageDataLookUp pagination(Set<DataCubeLookUpTb> dataCubes, PageInfo pageInfo, LOOK_UP_LEVEL lookUpLevel) {
+    private PageDataLookUp pagination(Set<DataCubeLookUpTb> dataCubes, PageInfo pageInfo, RequestCubeLookUp.LOOK_UP_LEVEL lookUpLevel) {
         int startIndex = (pageInfo.getPageNumber() - 1) * pageInfo.getPageSize();
         long dataCubeSize = getLevelSize(dataCubes, lookUpLevel);
         int endIndex = Math.min(startIndex + pageInfo.getPageSize(), Long.valueOf(dataCubeSize).intValue());
@@ -148,9 +140,28 @@ public class CubeLookUpService {
         int size = 0;
         List<DataCubeLookUpTb> tbs = new ArrayList<>();
         for (DataCubeLookUpTb dataCubeLookUpTb : dataCubes) {
+            if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.TB) {
+                if (size >= startIndex && size <= endIndex) {
+                    addLookUpTb(tbs,
+                            dataCubeLookUpTb);
+                }
+                size++;
+                continue;
+            }
+
             for (DataCubeLookUpGosb dataCubeLookUpGosb : dataCubeLookUpTb.getGosbs()) {
+                if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.GOSB) {
+                    if (size >= startIndex && size <= endIndex) {
+                        addLookUpGosb(tbs,
+                                dataCubeLookUpTb,
+                                dataCubeLookUpGosb);
+                    }
+                    size++;
+                    continue;
+                }
+
                 for (DataCubeLookUpOrganization dataCubeLookUpOrganization : dataCubeLookUpGosb.getOrganizations()) {
-                    if (lookUpLevel == LOOK_UP_LEVEL.ORGANIZATION) {
+                    if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.ORGANIZATION) {
                         if (size >= startIndex && size <= endIndex) {
                             addLookUpOrganization(tbs,
                                     dataCubeLookUpTb,
@@ -162,7 +173,7 @@ public class CubeLookUpService {
                     }
 
                     for (DataCubeLookUpContract dataCubeLookUpContract : dataCubeLookUpOrganization.getContracts()) {
-                        if (lookUpLevel == LOOK_UP_LEVEL.CONTRACT) {
+                        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.CONTRACT) {
                             if (size >= startIndex && size <= endIndex) {
                                 addLookUpContract(tbs,
                                         dataCubeLookUpTb,
@@ -175,7 +186,7 @@ public class CubeLookUpService {
                         }
 
                         for (DataCubeLookUpShop dataCubeLookUpShop : dataCubeLookUpContract.getShops()) {
-                            if (lookUpLevel == LOOK_UP_LEVEL.SHOP) {
+                            if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.SHOP) {
                                 if (size >= startIndex && size <= endIndex) {
                                     addLookUpShop(tbs,
                                             dataCubeLookUpTb,
@@ -189,7 +200,7 @@ public class CubeLookUpService {
                             }
 
                             for (DataCubeLookUpTerminal dataCubeLookUpTerminal : dataCubeLookUpShop.getTerminals()) {
-                                if (lookUpLevel == LOOK_UP_LEVEL.TERMINAL) {
+                                if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.TERMINAL) {
                                     if (size >= startIndex && size <= endIndex) {
                                         addLookUpTerminal(tbs,
                                                 dataCubeLookUpTb,
@@ -213,28 +224,28 @@ public class CubeLookUpService {
         return pageData;
     }
 
-    private long getLevelSize(Set<DataCubeLookUpTb> dataCubes, LOOK_UP_LEVEL lookUpLevel) {
-        if (lookUpLevel == LOOK_UP_LEVEL.ORGANIZATION) {
+    private long getLevelSize(Set<DataCubeLookUpTb> dataCubes, RequestCubeLookUp.LOOK_UP_LEVEL lookUpLevel) {
+        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.ORGANIZATION) {
             return dataCubes.stream()
                     .flatMap(t-> t.getGosbs().stream())
                     .mapToLong(g -> g.getOrganizations().size())
                     .sum();
         }
-        if (lookUpLevel == LOOK_UP_LEVEL.CONTRACT) {
+        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.CONTRACT) {
             return dataCubes.stream()
                     .flatMap(t-> t.getGosbs().stream())
                     .flatMap(g -> g.getOrganizations().stream())
                     .mapToLong(o -> o.getContracts().size())
                     .sum();
         }
-        if (lookUpLevel == LOOK_UP_LEVEL.SHOP) {
+        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.SHOP) {
             return dataCubes.stream().flatMap(t-> t.getGosbs().stream())
                     .flatMap(g -> g.getOrganizations().stream())
                     .flatMap(o -> o.getContracts().stream())
                     .mapToLong(o -> o.getShops().size())
                     .sum();
         }
-        if (lookUpLevel == LOOK_UP_LEVEL.TERMINAL) {
+        if (lookUpLevel == RequestCubeLookUp.LOOK_UP_LEVEL.TERMINAL) {
             return dataCubes.stream().flatMap(t-> t.getGosbs().stream())
                     .flatMap(g -> g.getOrganizations().stream())
                     .flatMap(o -> o.getContracts().stream())
@@ -243,6 +254,28 @@ public class CubeLookUpService {
                     .sum();
         }
         return 0;
+    }
+
+    private DataCubeLookUpTb addLookUpTb(List<DataCubeLookUpTb> dataCubes, DataCubeLookUpTb dataCubeLookUpTb) {
+        DataCubeLookUpTb tb = dataCubes.stream()
+                .filter(d -> d.getCode().equals(dataCubeLookUpTb.getCode()))
+                .findFirst()
+                .orElse(null);
+        if (tb == null) {
+            tb = new DataCubeLookUpTb(dataCubeLookUpTb.getCode());
+            dataCubes.add(tb);
+        }
+        return tb;
+    }
+
+    private DataCubeLookUpGosb addLookUpGosb(List<DataCubeLookUpTb> dataCubes, DataCubeLookUpTb dataCubeLookUpTb, DataCubeLookUpGosb dataCubeLookUpGosb) {
+        DataCubeLookUpTb tb = addLookUpTb(dataCubes, dataCubeLookUpTb);
+        DataCubeLookUpGosb gosb = tb.findGosb(dataCubeLookUpGosb.getCode());
+        if (gosb==null) {
+            gosb = new DataCubeLookUpGosb(dataCubeLookUpGosb.getCode());
+            tb.getGosbs().add(gosb);
+        }
+        return gosb;
     }
 
     private DataCubeLookUpOrganization addLookUpOrganization(List<DataCubeLookUpTb> dataCubes, DataCubeLookUpTb dataCubeLookUpTb, DataCubeLookUpGosb dataCubeLookUpGosb, DataCubeLookUpOrganization dataCubeLookUpOrganization) {
