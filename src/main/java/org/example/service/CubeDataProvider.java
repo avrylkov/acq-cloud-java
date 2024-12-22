@@ -15,12 +15,12 @@ import org.example.model.deep.PageInfo;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -290,11 +290,12 @@ public class CubeDataProvider implements DataProvider {
 
     private void init() {
         if (lock.tryLock()) {
+            AtomicInteger i = new AtomicInteger();
             try {
                 if (dataAllTb == null) {
                     LocalDateTime start = LocalDateTime.now();
                     log.info("start init");
-                    SecureRandom secureRandom = new SecureRandom();
+                    //SecureRandom secureRandom = new SecureRandom();
                     Set<String> keys = new HashSet<>(30_000);
 
                     InputStream resourceAsStream = Main.class.getResourceAsStream("/json/cube.json");
@@ -305,7 +306,7 @@ public class CubeDataProvider implements DataProvider {
                             .flatMap(g -> g.getOrganization().stream())
                             .peek(o -> {
                                 if (keys.contains(o.getCode())) {
-                                    o.setCode(o.getCode() + "#" + secureRandom.nextInt());
+                                    o.setCode(o.getCode() + "#" + i.getAndIncrement());
                                 } else {
                                     keys.add(o.getCode());
                                 }
@@ -313,7 +314,7 @@ public class CubeDataProvider implements DataProvider {
                             .flatMap(o -> o.getContract().stream())
                             .peek(c -> {
                                 if (keys.contains(c.getCode())) {
-                                    c.setCode(c.getCode() + "#" + secureRandom.nextInt());
+                                    c.setCode(c.getCode() + "#" + i.getAndIncrement());
                                 } else {
                                     keys.add(c.getCode());
                                 }
@@ -321,7 +322,7 @@ public class CubeDataProvider implements DataProvider {
                             .flatMap(c -> c.getShop().stream())
                             .forEach(s -> {
                                 if (keys.contains(s.getCode())) {
-                                    s.setCode(s.getCode() + "#" + secureRandom.nextInt());
+                                    s.setCode(s.getCode() + "#" + i.incrementAndGet());
                                 } else {
                                     keys.add(s.getCode());
                                 }
