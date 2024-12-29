@@ -7,6 +7,7 @@ import org.example.model.RequestCubeCode;
 public class RequestCubeDeep {
 
     private PageInfo pageInfo = new PageInfo();
+    private SortInfo sortInfo;
     private RequestCubeCode code;
     private String codeFilter;
     private String tb;

@@ -6,10 +6,13 @@ import org.example.model.Metric;
 import org.example.model.deep.PageInfo;
 import org.example.model.deep.RequestCubeDeep;
 import org.example.model.deep.PageDataDeep;
+import org.example.model.deep.SortInfo;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class CubeDeepService {
@@ -72,13 +75,15 @@ public class CubeDeepService {
 
     public PageDataDeep getDataCubeDeep(@NotNull RequestCubeDeep rq) {
         switch (rq.getCode()) {
-            case ALL :  return pagination(Collections.singletonList(getAllTb()), rq.getPageInfo());
-            case ALL_TB: return pagination(filterByCode(fillAllTb(), rq), rq.getPageInfo());
-            case TB: return pagination(filterByCode(fillTbGosb(rq.getTb()), rq), rq.getPageInfo());
-            case GOSB: return pagination(filterByCode(fillTbGosbOrg(rq.getTb(), rq.getGosb()), rq), rq.getPageInfo());
-            case ORG: return pagination(filterByCode(fillTbGosbOrgContr(rq.getTb(), rq.getGosb(), rq.getOrg()), rq), rq.getPageInfo());
-            case CONTRACT: return pagination(filterByCode(fillTbGosbOrgContrShop(rq.getTb(), rq.getGosb(), rq.getOrg(), rq.getContract()), rq), rq.getPageInfo());
-            case SHOP: return pagination(filterByCode(fillTbGosbOrgContrShopTerminal(rq.getTb(), rq.getGosb(), rq.getOrg(), rq.getContract(), rq.getShop()), rq), rq.getPageInfo());
+            case ALL :  return pagination(Collections.singletonList(getAllTb()), rq.getPageInfo(), rq.getSortInfo());
+            case ALL_TB: return pagination(filterByCode(fillAllTb(), rq), rq.getPageInfo(), rq.getSortInfo());
+            case TB: return pagination(filterByCode(fillTbGosb(rq.getTb()), rq), rq.getPageInfo(), rq.getSortInfo());
+            case GOSB: return pagination(filterByCode(fillTbGosbOrg(rq.getTb(), rq.getGosb()), rq), rq.getPageInfo(), rq.getSortInfo());
+            case ORG: return pagination(filterByCode(fillTbGosbOrgContr(rq.getTb(), rq.getGosb(), rq.getOrg()), rq), rq.getPageInfo(), rq.getSortInfo());
+            case CONTRACT: return pagination(filterByCode(fillTbGosbOrgContrShop(rq.getTb(), rq.getGosb(), rq.getOrg(),
+                    rq.getContract()), rq), rq.getPageInfo(), rq.getSortInfo());
+            case SHOP: return pagination(filterByCode(fillTbGosbOrgContrShopTerminal(rq.getTb(), rq.getGosb(),
+                    rq.getOrg(), rq.getContract(), rq.getShop()), rq), rq.getPageInfo(), rq.getSortInfo());
         }
         return new PageDataDeep(0);
     }
@@ -139,7 +144,21 @@ public class CubeDeepService {
     }
 
 
-    private PageDataDeep pagination(List<DataCube> dataCubes, PageInfo pageInfo) {
+    private PageDataDeep pagination(List<DataCube> dataCubes, PageInfo pageInfo, SortInfo sortInfo) {
+        if (sortInfo != null) {
+            dataCubes.sort((m1, m2) -> {
+                Optional<Metric> m1Opt = m1.getMetrics().stream().filter(m -> m.getName().equals(sortInfo.getMetricName())).findFirst();
+                Optional<Metric> m2Opt = m2.getMetrics().stream().filter(m -> m.getName().equals(sortInfo.getMetricName())).findFirst();
+                if (m1Opt.isPresent() && m2Opt.isPresent()) {
+                    if (sortInfo.isAscending()) {
+                        return Long.compare(m1Opt.get().getValue(), m2Opt.get().getValue());
+                    } else {
+                        return -(Long.compare(m1Opt.get().getValue(), m2Opt.get().getValue()));
+                    }
+                }
+                return 0;
+            });
+        }
         List<DataCube> pagination = dataProvider.pagination(dataCubes, pageInfo);
         PageDataDeep pageDataDeep = new PageDataDeep(dataCubes.size());
         pageDataDeep.setDataCubes(pagination);
